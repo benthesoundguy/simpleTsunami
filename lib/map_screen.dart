@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'tsunami_data_service.dart'; // Ensure this import is present
 
 class MapScreen extends StatefulWidget {
   @override
@@ -9,6 +10,33 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
+  List<Marker> _tsunamiMarkers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    TsunamiDataService().fetchTsunamiData().then((data) {
+      setState(() {
+        _tsunamiMarkers = data
+            .where((event) => event['latitude'] != null && event['longitude'] != null)
+            .map<Marker>((event) {
+          final latitude = double.parse(event['latitude'].toString());
+          final longitude = double.parse(event['longitude'].toString());
+          print('Creating marker for event: $event'); // Add this line for debugging
+          return Marker(
+            width: 80.0,
+            height: 80.0,
+            point: LatLng(latitude, longitude),
+            builder: (ctx) => Container(
+              child: Icon(Icons.warning, color: Colors.red),
+            ),
+          );
+        }).toList();
+      });
+    }).catchError((error) {
+      print('Error fetching tsunami data: $error'); // Add this line for debugging
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +57,9 @@ class _MapScreenState extends State<MapScreen> {
           TileLayer(
             urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
             subdomains: ['a', 'b', 'c'],
+          ),
+          MarkerLayer(
+            markers: _tsunamiMarkers,
           ),
         ],
       ),
